@@ -1,0 +1,72 @@
+CONTROLADORES DE QOS AUTOMÁTICOS
+================================
+
+DESCRIÇÃO:
+Dois scripts Python que monitoram a latência de um servidor TCP e ativam/desativam QoS em roteadores automaticamente:
+
+1. qos_controller_htb.py: Implementa QoS usando Hierarchical Token Bucket (HTB)
+2. qos_controller_pfifo.py: Implementa QoS usando filas prioritárias (PRIO) com PFIFO
+
+FUNCIONAMENTO:
+--------------------------------
+1. Monitoram o arquivo de log /var/log/tcp_persistent_server.log em tempo real
+2. Extraem valores de latência (ex: "latency=12.3ms")
+3. Calculam média móvel da latência:
+   - Janela inicial: últimas 10 medições (sem QoS)
+   - Janela pós-ativação: últimas 50 medições (com QoS)
+4. Ativam QoS quando:
+   - Latência média > 5ms (configurável)
+   - QoS não está ativo
+   - Janela cheia (10 medições)
+5. Desativam QoS quando:
+   - Latência média < 5ms
+   - QoS ativo
+   - Janela cheia (50 medições)
+
+CONFIGURAÇÃO (EDITAR OS SCRIPTS):
+--------------------------------
+- ROUTERS: IPs dos roteadores (ex: {'r1': '10.0.1.1'})
+- USERNAME/PASSWORD: Credenciais SSH
+- LATENCY_HIGH_THRESHOLD: Limiar de latência (padrão: 5.0 ms)
+- WINDOW_BEFORE_QOS: Tamanho da janela pré-ativação (padrão: 10)
+- WINDOW_AFTER_QOS: Tamanho da janela pós-ativação (padrão: 50)
+
+DIFERENÇAS ENTRE SCRIPTS:
+--------------------------------
+qos_controller_htb.py (HTB):
+   - Classes de largura de banda (40Mbit para alta prioridade)
+   - Controle hierárquico de taxa
+   - Comandos tc usados: htb, class, filter
+
+qos_controller_pfifo.py (PRIO):
+   - Filas prioritárias com tamanhos diferentes
+   - Alta prioridade: pfifo limit 1000
+   - Baixa prioridade: pfifo limit 5000
+   - Comandos tc usados: prio, pfifo
+
+PRÉ-REQUISITOS:
+--------------------------------
+1. Arquivo de log gerado pelo servidor TCP
+2. Acesso SSH aos roteadores (credenciais corretas)
+3. Python 3 e bibliotecas:
+   - paramiko
+   - re
+   - collections
+
+USO:
+--------------------------------
+1. Configure os parâmetros no script
+2. Torne executável:
+   chmod +x qos_controller_*.py
+3. Executar como daemon ou em terminal:
+   ./qos_controller_htb.py
+   ./qos_controller_pfifo.py
+
+COMPORTAMENTO ESPERADO:
+--------------------------------
+[INFO] Média (10): 6.243 ms     # Ativa QoS se >5ms
+[ALERTA] Latência elevada — Ativando QoS...
+[OK] Ativado QoS em 10.0.1.1
+
+[INFO] Média (50): 4.112 ms     # Desativa QoS se <5ms
+[OK] Latência estabilizada — Removendo QoS...
