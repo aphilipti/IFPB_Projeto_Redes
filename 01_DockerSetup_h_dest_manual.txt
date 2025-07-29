@@ -1,0 +1,71 @@
+---
+
+### Script: `01_DockerSetup_h_dest.sh`
+
+#### Descrição
+Configura um container Docker (`h_dest_container`) para integração com redes Mininet, incluindo instalação de dependências e configuração de rotas.
+
+#### Funcionalidades
+1. **start**:  
+   - Cria uma rede Docker personalizada (`mininet-net`, sub-rede `10.0.1.0/24`)
+   - Inicia o container baseado em `ubuntu:22.04`
+   - Conecta o container à rede Mininet (`10.0.1.2`)
+   - Monta o diretório local `./scripts` em `/app` no container
+
+2. **install**:  
+   - Instala dependências: `python3`, `iproute2`, `net-tools`, `iputils-ping`, `tcpdump`, `iperf3`
+   - Adiciona rotas estáticas para redes Mininet pré-definidas via gateway `10.0.1.1`
+
+3. **shell**:  
+   - Acesso ao terminal interativo do container
+
+4. **stop**:  
+   - Para e remove o container
+
+#### Redes Mininet Configuradas
+```bash
+172.16.2.0/24
+172.16.3.0/24
+172.16.4.0/24
+172.16.5.0/24
+192.168.7.0/24
+192.168.8.0/24
+```
+
+#### Modo de Uso
+```bash
+./01_DockerSetup_h_dest.sh [comando]
+```
+
+| Comando   | Ação                                                                 | Pré-requisitos              |
+|-----------|----------------------------------------------------------------------|-----------------------------|
+| `start`   | Cria container e rede                                                | Docker instalado            |
+| `install` | Instala dependências e configura rotas                               | Container em execução (`start`) |
+| `shell`   | Acesso ao terminal do container                                      | Container em execução       |
+| `stop`    | Remove container                                                     | Container existente         |
+
+#### Fluxo Recomendado
+1. Iniciar container:
+   ```bash
+   ./01_DockerSetup_h_dest.sh start
+   ```
+2. Instalar dependências:
+   ```bash
+   ./01_DockerSetup_h_dest.sh install
+   ```
+3. (Opcional) Acessar container:
+   ```bash
+   ./01_DockerSetup_h_dest.sh shell
+   ```
+4. Parar container quando não necessário:
+   ```bash
+   ./01_DockerSetup_h_dest.sh stop
+   ```
+
+#### Observações
+- Após `install`, o container está pronto para comunicação com a topologia Mininet
+- O gateway padrão para redes Mininet é `10.0.1.1`
+- Rotas são adicionadas automaticamente durante `install`
+- O diretório `./scripts` do host é mapeado para `/app` no container
+
+--- 
