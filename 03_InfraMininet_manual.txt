@@ -1,0 +1,90 @@
+### Manual: Scripts de Topologia Mininet para Redes 5G  
+
+---
+
+#### **Descrição Geral**  
+Os scripts implementam uma topologia de rede 5G simulada com Mininet e Docker, projetada para testar QoS (Quality of Service). Três versões estão disponíveis:  
+1. **`03_InfraMininet_HTB.py`**: Usa *Hierarchical Token Bucket (HTB)* para priorização avançada de tráfego (uRLLC, eMBB, best-effort).  
+2. **`03_InfraMininet_PFIFO.py`**: Usa *PRIO + PFIFO* para filas prioritárias simples.  
+3. **`03_InfraMininet_noQOS.py`**: **Sem QoS**, para comparação de desempenho.  
+
+A topologia inclui:  
+- 4 roteadores Linux (`r1`, `r2`, `r3`, `r4`).  
+- 3 switches Open vSwitch (`s1`, `s3`, `s4`).  
+- Hosts especializados (uRLLC/eMBB) para tráfego de baixa latência/alta taxa.  
+- Integração com uma bridge Docker (`docker-br`) para conectar containers externos.  
+
+---
+
+#### **Pré-requisitos**  
+1. Mininet, Docker e Open vSwitch instalados.  
+2. **Bridge Docker pré-configurada**:  
+   - Execute primeiro:  
+     ```bash  
+     ./setup_h_dest_containerV5.sh  # Cria a bridge "docker-br"  
+     ```  
+
+---
+
+#### **Como Executar**  
+**Sintaxe básica**:  
+```bash  
+sudo python3 <script> [--bw LARGURA_BANDA] [--delay ATRASO] [--loss PERDA]  
+```  
+
+| Parâmetro    | Descrição                          | Valor Padrão |  
+|--------------|------------------------------------|--------------|  
+| `--bw`       | Largura de banda (Mbps)            | 100          |  
+| `--delay`    | Atraso de rede (ms)                | 1            |  
+| `--loss`     | Perda de pacotes (%)               | 0            |  
+
+**Exemplos**:  
+```bash  
+# Com QoS HTB (controle de banda)  
+sudo python3 03_InfraMininet_HTB.py --bw 50 --delay 5 --loss 0.1  
+
+# Sem QoS (benchmark)  
+sudo python3 03_InfraMininet_noQOS.py --bw 100  
+```  
+
+---
+
+#### **Funcionamento**  
+1. **Inicialização**:  
+   - Verifica se a bridge `docker-br` existe.  
+   - Cria roteadores, switches, hosts e links com parâmetros de rede (banda/atraso/perda).  
+   - Conecta a bridge Docker ao switch `s1` via par de interfaces virtuais (`veth`).  
+
+2. **Configuração de Rede**:  
+   - **Rotas estáticas**: Definidas entre roteadores para redundância.  
+   - **QoS** (exceto na versão `noQOS`):  
+     - *HTB*: Divide banda em classes (20% uRLLC, 40% eMBB, 40% best-effort).  
+     - *PFIFO*: Prioriza tráfego por TOS (0xB8 = uRLLC, 0x28 = eMBB).  
+   - **SSH**: Ativado em roteadores (usuário: `mininet`, senha: `m1ninetpwd` ou `mininet`).  
+
+3. **Testes Recomendados**:  
+   - Acesse o container Docker:  
+     ```bash  
+     ./setup_h_dest_containerV5.sh shell  
+     ```  
+   - Testes básicos:  
+     ```bash  
+     ping 10.0.1.1            # Gateway do container  
+     ping 192.168.7.2         # Host uRLLC  
+     ```  
+   - Use `iperf`/`ping` para medir latência/vazão durante congestionamento.  
+
+4. **Encerramento**:  
+   - Digite `exit` no CLI do Mininet.  
+   - Scripts removem automaticamente interfaces virtuais criadas.  
+
+---
+
+#### **Notas**  
+- **HTB vs PFIFO**:  
+  - *HTB*: Ideal para garantia de banda mínima (ex: uRLLC tem 20% reservada).  
+  - *PFIFO*: Focado em priorização simples sem reserva de banda.  
+- **Redundância**: Rotas alternativas entre `r3` e `r4` (ex: tráfego para `192.168.7.0/24` via `r3` ou `r4`).  
+- **Logs**: Use `--logLevel debug` para detalhes de inicialização.  
+
+> **Aviso**: Não execute múltiplas instâncias simultaneamente (conflito de interfaces).
