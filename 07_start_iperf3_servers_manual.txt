@@ -1,0 +1,43 @@
+**Script: 07_start_iperf3_servers.sh**  
+**Descrição:** Inicia múltiplos servidores iperf3 em portas específicas para testes de rede.  
+
+---
+
+### **Funcionamento:**  
+1. **Loop de portas:**  
+   O script itera por 10 portas predefinidas: `5201` até `5210`.  
+2. **Inicia servidores:**  
+   Para cada porta, executa:  
+   ```bash  
+   iperf3 -s -p $PORT &  
+   ```  
+   - `-s`: Inicia o iperf3 em modo servidor.  
+   - `-p $PORT`: Define a porta de escuta.  
+   - `&`: Roda o processo em segundo plano, liberando o terminal.  
+
+---
+
+### **Como Usar:**  
+1. **Dê permissão de execução:**  
+   ```bash  
+   chmod +x 07_start_iperf3_servers.sh  
+   ```  
+2. **Execute o script:**  
+   ```bash  
+   ./07_start_iperf3_servers.sh  
+   ```  
+3. **Verifique os servidores:**  
+   Use `netstat` ou `ss` para confirmar as portas em uso:  
+   ```bash  
+   ss -tuln | grep '520[1-9]\|5210'  
+   ```  
+
+---
+
+### **Importante:**  
+- **Pré-requisito:** O `iperf3` deve estar instalado no sistema.  
+- **Encerrar servidores:** Use `pkill iperf3` para parar todos os servidores.  
+- **Portas fixas:** As portas são definidas no script (5201–5210). Edite o arquivo para alterá-las.  
+
+---  
+**Nota:** Ideal para testes paralelos de largura de banda com múltiplos clientes.
