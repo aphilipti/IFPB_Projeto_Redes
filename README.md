@@ -1,17 +1,20 @@
-# IFPB_Projeto_Redes
-Lista completa de requisitos para executar o cenário em uma máquina virtual Ubuntu:
-________________________________________
-1. Requisitos de Sistema
-•	Sistema Operacional: Ubuntu 22.04 LTS (ou superior)
-•	Kernel: Linux 5.15+ (suporte a namespaces/networking)
-•	Recursos Mínimos:
-o	CPU: 4 núcleos
-o	RAM: 8 GB
-o	Armazenamento: 20 GB (SSD recomendado)
-o	Acesso root/sudo para operações privilegiadas
-________________________________________
-2. Dependências de Pacotes
-bash
+# Cenário de Rede com Mininet e QoS
+
+Este documento descreve os requisitos e procedimentos para configurar um ambiente de rede com suporte a QoS (Quality of Service) usando Mininet e Docker em uma máquina Ubuntu.
+
+## 📋 Requisitos de Sistema
+- **Sistema Operacional**: Ubuntu 22.04 LTS (ou superior)
+- **Kernel Linux**: 5.15+ (com suporte a namespaces/networking)
+- **Recursos Mínimos**:
+  - CPU: 4 núcleos
+  - RAM: 8 GB
+  - Armazenamento: 20 GB (SSD recomendado)
+- Acesso `root/sudo` obrigatório para operações privilegiadas
+
+## ⚙️ Instalação e Configuração
+
+### 1. Dependências de Pacotes
+```bash
 # Atualizar sistema
 sudo apt update && sudo apt upgrade -y
 
@@ -30,112 +33,125 @@ sudo apt install -y \
   build-essential \
   libssl-dev \
   ethtool
-________________________________________
-3. Configuração do Docker
-bash
+```
+
+### 2. Configuração do Docker
+```bash
 # Adicionar usuário ao grupo docker
 sudo usermod -aG docker $USER
 newgrp docker
 
 # Iniciar serviço Docker
 sudo systemctl enable docker && sudo systemctl start docker
-________________________________________
-4. Dependências Python
-bash
-# Instalar bibliotecas Python
+```
+
+### 3. Dependências Python
+```bash
 pip3 install \
   scapy \
   paramiko \
   mininet \
   psutil \
   numpy
-________________________________________
-5. Configuração Específica do Projeto
-1.	Estrutura de Diretórios:
-bash
+```
+
+### 4. Configuração do Projeto
+```bash
+# Criar estrutura de diretórios
 mkdir -p ~/projeto_final/{scripts,logs,configs}
-o	Todos os scripts devem ser copiados para ~/projeto_final/scripts/
-o	Arquivos de log em ~/projeto_final/logs/
-2.	Permissões de Execução:
-bash
+
+# Dar permissão de execução aos scripts
 chmod +x ~/projeto_final/scripts/*.sh
 chmod +x ~/projeto_final/scripts/*.py
-________________________________________
-6. Configurações de Rede
-•	Habilitar IP Forwarding:
-bash
+```
+
+### 5. Configurações de Rede
+```bash
+# Habilitar IP Forwarding
 echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
-•	Desativar Firewall/Conflitos:
-bash
+
+# Desativar firewall
 sudo systemctl stop ufw && sudo systemctl disable ufw
-________________________________________
-7. Configuração do Ambiente Mininet
-1.	Instalar Mininet:
-bash
+```
+
+### 6. Ambiente Mininet
+```bash
+# Instalar Mininet
 git clone https://github.com/mininet/mininet
 cd mininet
 sudo util/install.sh -nfvp
-2.	Validar Instalação:
-bash
+
+# Validar instalação
 sudo mn --test pingall
-________________________________________
-8. Pré-requisitos para QoS
-•	HTB/PFIFO: Suporte do kernel para QoS:
-bash
+```
+
+### 7. Pré-requisitos para QoS
+```bash
+# Instalar ferramentas
 sudo apt install -y linux-tools-common linux-tools-generic
-•	Módulos do Kernel:
-bash
+
+# Carregar módulos do kernel
 sudo modprobe sch_htb sch_prio sch_netem
-________________________________________
-9. Configuração do Container Docker (h_dest)
-Execute sequencialmente:
-bash
+```
+
+## 🚀 Fluxo de Execução
+
+### 1. Configurar Container Docker (h_dest)
+```bash
 cd ~/projeto_final/scripts/
 ./01_DockerSetup_h_dest.sh start
 ./01_DockerSetup_h_dest.sh install
-________________________________________
-10. Serviços Adicionais
-•	SSH nos Roteadores: Credenciais padrão (mininet:m1ninetpwd)
-•	Servidor Iperf (no container):
-bash
+```
+
+### 2. Iniciar Serviços Adicionais
+```bash
+# Iniciar servidor Iperf no container
 docker exec -d h_dest_container /app/07_start_iperf3_servers.sh
-________________________________________
-11. Fluxo de Execução Típico
-1.	Iniciar Topologia Mininet:
-bash
+```
+
+### 3. Executar Cenário Principal
+```bash
+# Iniciar topologia Mininet com QoS
 sudo python3 ~/projeto_final/scripts/03_InfraMininet_HTB.py --bw 100 --delay 1 --loss 0
-2.	Gerar Tráfego:
-o	uRLLC (dentro do Mininet):
-bash
+
+# Dentro do ambiente Mininet:
 mininet> h3_urllc python3 /caminho/04_TCP_uRLLC_trafego_SOCKET.py --server 10.0.1.2
-o	eMBB:
-bash
+
+# Em outro terminal:
 ./05_UDP_eMBB_trafego.sh
-3.	Monitorar QoS:
-bash
+
+# Monitorar QoS
 python3 ~/projeto_final/scripts/qos_controller_htb.py
-________________________________________
-12. Validação Pós-Instalação
-•	Verifique interfaces Docker:
-bash
-brctl show docker-br
-•	Teste conectividade do container:
-bash
-docker exec h_dest_container ping 10.0.1.1
-•	Verifique rotas no container:
-bash
-docker exec h_dest_container ip route
-________________________________________
-Notas Importantes
-1.	Todos os comandos sudo exigem senha do usuário.
-2.	Scripts .sh devem ser executados no diretório do projeto.
-3.	Para topologias alternativas (sem QoS):
-bash
+```
+
+### 4. Topologia Alternativa (sem QoS)
+```bash
 sudo python3 03_InfraMininet_noQOS.py --bw 100
-4.	Logs detalhados estão em:
-o	/var/log/tcp_persistent_server.log
-o	/var/log/urllc_tcp_window_stats.log
-Este checklist cobre todos os requisitos técnicos para replicar o ambiente descrito nos scripts. Recomenda-se uma VM dedicada para evitar conflitos de configuração.
+```
 
+## ✔️ Validação Pós-Instalação
+```bash
+# Verificar interfaces Docker
+brctl show docker-br
 
+# Testar conectividade do container
+docker exec h_dest_container ping 10.0.1.1
+
+# Verificar rotas no container
+docker exec h_dest_container ip route
+```
+
+## 📝 Notas Importantes
+1. Todos os comandos `sudo` exigem a senha do usuário
+2. Scripts `.sh` devem ser executados no diretório do projeto
+3. Credenciais padrão SSH para roteadores: 
+   - Usuário: `mininet`
+   - Senha: `m1ninetpwd`
+4. Logs principais:
+   - `/var/log/tcp_persistent_server.log`
+   - `/var/log/urllc_tcp_window_stats.log`
+5. Recomenda-se usar uma VM dedicada para evitar conflitos de configuração
+
+## 🔍 Informações Adicionais
+Para suporte ou problemas, consulte a documentação oficial do [Mininet](http://mininet.org/) e [Docker](https://docs.docker.com/).
