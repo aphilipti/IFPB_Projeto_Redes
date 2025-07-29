@@ -1,0 +1,81 @@
+### Manual: Servidor TCP para Medição de Latência
+
+**Descrição:**  
+Este script implementa um servidor TCP que mede a latência de rede entre clientes e o servidor. Ele recebe pacotes contendo *timestamps* dos clientes, calcula a latência em milissegundos e registra os resultados em um arquivo de log. Conexões são persistentes e suportam múltiplas medições sequenciais.
+
+---
+
+**Funcionamento:**  
+1. **Inicialização:**  
+   - Escuta na porta `5000` de todas as interfaces (`0.0.0.0`).  
+   - Cria logs em `/var/log/tcp_persistent_server.log`.  
+   - Suporta até `10` conexões simultâneas.  
+
+2. **Fluxo de Trabalho:**  
+   - **Cliente conecta:**  
+     - Aceita a conexão e inicia uma thread dedicada.  
+   - **Medição de latência:**  
+     1. Cliente envia um *timestamp* (ex: `1620000000.123`).  
+     2. Servidor registra o horário de recebimento.  
+     3. Calcula: `Latência = (Recebimento - Timestamp) × 1000` (ms).  
+   - **Log:**  
+     - Registra `src=<IP> seq=<ID> latency=<valor>ms` no arquivo de log.  
+     - Exemplo: `src=192.168.1.10 seq=123 latency=15.382ms`.  
+   - **Conexão persistente:**  
+     - Mantém a conexão ativa para novos pacotes até ser fechada pelo cliente.  
+
+3. **Tratamento de Erros:**  
+   - Detecta desconexões inesperadas, dados inválidos e erros de SO.  
+   - Oferece soluções para erros comuns (ex: porta bloqueada).  
+
+---
+
+**Como Usar:**  
+
+1. **Executar o servidor:**  
+   ```bash
+   sudo python3 06_TCP_latency_Server_SOCKET.py
+   ```  
+   *Requer `sudo` para acessar a porta 5000.*  
+
+2. **Conectar um cliente:**  
+   - Exemplo de cliente Python:  
+     ```python
+     import socket, time
+     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+     client.connect(("IP_DO_SERVIDOR", 5000))
+     timestamp = str(time.perf_counter()).encode()
+     client.send(timestamp)
+     # Repetir para novas medições
+     client.close()
+     ```  
+
+3. **Parar o servidor:**  
+   Pressione `Ctrl+C` para encerrar.  
+
+---
+
+**Logs:**  
+- Verifique os resultados em:  
+  ```bash
+  cat /var/log/tcp_persistent_server.log
+  ```  
+- Formato:  
+  ```log
+  2025-07-30 12:00:00 - src=192.168.1.10 seq=1620000000123 latency=15.382ms
+  ```  
+
+---
+
+**Solução de Problemas Comuns:**  
+- **Erro "Porta já em uso"**:  
+  ```bash
+  sudo lsof -i :5000    # Verificar processos usando a porta
+  sudo kill -9 <PID>    # Encerrar processo (se necessário)
+  ```  
+- **Permissões negadas**:  
+  - Execute com `sudo`.  
+- **Logs não criados**:  
+  - Garanta que o diretório `/var/log/` existe e é gravável.  
+
+> **Nota:** Este servidor é ideal para testes de rede contínuos. Para ambientes críticos, considere adicionar autenticação ou criptografia.
