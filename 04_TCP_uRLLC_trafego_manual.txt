@@ -1,0 +1,84 @@
+### Manual: Clientes TCP uRLLC
+
+#### Descrição
+Os scripts enviam tráfego TCP para simular comunicações uRLLC (Ultra-Reliable Low-Latency).  
+**Dois métodos são oferecidos**:
+1. `04_TCP_uRLLC_trafego_SCAPY_SOCKET.py`: Usa Scapy para gerar payload + socket para envio.
+2. `04_TCP_uRLLC_trafego_SOCKET.py`: Usa apenas sockets Python (recomendado para desempenho).
+
+**Funcionamento**:
+- Estabelecem conexão TCP com o servidor.
+- Enviam pacotes contendo um *timestamp* de alta precisão no payload.
+- Configuram prioridade de rede (DSCP EF - `0xB8`) e desativam o algoritmo de Nagle (`TCP_NODELAY`).
+- Fornecem estatísticas de envio ao finalizar.
+
+---
+
+#### Como Usar
+
+##### Pré-requisitos
+- Python 3 instalado.
+- Para o script com Scapy:  
+  ```bash
+  pip install scapy
+  ```
+
+##### Sintaxe Básica
+```bash
+python3 <script> --server <IP> [--port PORTA] [--interval INTERVALO] [--size TAMANHO]
+```
+
+| Argumento     | Descrição                          | Padrão |
+|---------------|------------------------------------|--------|
+| `--server`    | IP do servidor (obrigatório)       | -      |
+| `--port`      | Porta do servidor                  | 5000   |
+| `--interval`  | Intervalo entre pacotes (segundos) | 0.5    |
+| `--size`      | Tamanho do payload (bytes)         | 128    |
+
+##### Exemplos
+1. **Conexão básica**:
+   ```bash
+   python3 04_TCP_uRLLC_trafego_SOCKET.py --server 192.168.1.100
+   ```
+
+2. **Configuração personalizada**:
+   ```bash
+   python3 04_TCP_uRLLC_trafego_SCAPY_SOCKET.py --server 10.0.0.5 --port 6000 --interval 0.1 --size 64
+   ```
+
+---
+
+#### Saída do Programa
+- **Durante operação**:
+  ```
+  Enviados 10 pacotes | Último timestamp: 12345.678901
+  ```
+- **Ao interromper (Ctrl+C)**:
+  ```
+  Resumo: 50 pacotes enviados em 25.05s
+  Taxa média: 2.00 pps
+  ```
+
+---
+
+#### Notas Importantes
+1. **Prioridade de Rede**:  
+   Pacotes são marcados com `ToS=0xB8` (DSCP EF) para baixa latência.
+
+2. **Formato do Payload**:  
+   - Contém um timestamp (ex: `12345.678901`).
+   - Preenchido com espaços até atingir `--size`.
+
+3. **Recomendação**:  
+   Use o script **puro com socket** (`_SOCKET.py`) para melhor desempenho e menor overhead.
+
+4. **Servidor Necessário**:  
+   Configure um servidor TCP na porta especificada antes de executar.
+
+---
+
+#### Tratamento de Erros
+- `ConnectionRefusedError`: Servidor inativo/não encontrado.
+- `BrokenPipeError`: Servidor fechou a conexão.
+- `socket.timeout`: Sem resposta do servidor.
+- `KeyboardInterrupt`: Envio interrompido pelo usuário (Ctrl+C).
