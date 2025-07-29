@@ -1,0 +1,69 @@
+### Manual: Script de Monitoramento URLLC TCP
+
+**Descrição:**  
+Este script monitora pacotes TCP marcados como URLLC (TOS=0xB8) em uma interface de rede específica. Ele coleta estatísticas em tempo real sobre:
+- Janela TCP (`window size`)
+- Tamanho do payload
+- Pacotes por segundo (pps)
+Os dados são agregados por par (origem, destino) e registrados em um arquivo de log a cada intervalo configurável.
+
+---
+
+**Funcionamento:**  
+1. **Filtragem de Pacotes:**  
+   - Captura pacotes TCP na porta `5000` (configurável) com TOS=`0xB8` (URLLC).  
+   - Ignora outros tipos de tráfego.  
+
+2. **Coleta de Dados:**  
+   - Para cada pacote válido, armazena:  
+     - Contagem de pacotes (`count`)  
+     - Soma das janelas TCP (`sum_window`)  
+     - Soma dos tamanhos de payload (`sum_length`)  
+   - Agrupa estatísticas por tupla `(IP_origem, IP_destino)`.  
+
+3. **Relatório Periódico:**  
+   - A cada `5 segundos` (padrão):  
+     - Calcula médias:  
+       - `avg_window = sum_window / count`  
+       - `avg_length = sum_length / count`  
+       - `pps = count / intervalo`  
+     - Registra os dados no arquivo de log `/var/log/urllc_tcp_window_stats.log`.  
+     - Reinicia os contadores.  
+
+---
+
+**Como Usar:**  
+1. **Pré-requisitos:**  
+   - Python 3 e bibliotecas:  
+     ```bash
+     pip install scapy
+     ```
+
+2. **Execução:**  
+   - Execute com privilégios de root (requer acesso à interface de rede):  
+     ```bash
+     sudo ./08_urllc_tcp_pps_stats.py
+     ```
+   - Saída esperada (tela e arquivo de log):  
+     ```
+     2025-07-30T12:34:56.789012 src=192.168.1.100 dst=10.0.0.1 avg_window=8192.0 avg_length=100.0 pps=20.00
+     ```
+
+3. **Personalização (Edite o script):**  
+   - `INTERFACE`: Interface de rede (padrão: `eth1`).  
+   - `PORT`: Porta TCP alvo (padrão: `5000`).  
+   - `TOS_URRLC`: Valor TOS para URLLC (hex `0xB8`).  
+   - `LOG_FILE`: Caminho do log (padrão: `/var/log/urllc_tcp_window_stats.log`).  
+   - `INTERVAL`: Frequência de relatório em segundos (padrão: `5`).  
+
+---
+
+**Notas:**  
+- O script roda continuamente até ser interrompido (`Ctrl+C`).  
+- Verifique permissões de escrita no diretório do log.  
+- Para depuração, remova `store=False` em `sniff()` (armazena pacotes em memória).  
+
+**Exemplo de Saída no Log:**  
+```
+2025-07-30T12:34:56.789012 src=192.168.1.100 dst=10.0.0.1 avg_window=85 avg_length=128 pps=20.00
+```
