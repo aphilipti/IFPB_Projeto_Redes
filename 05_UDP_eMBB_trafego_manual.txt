@@ -1,0 +1,66 @@
+### Manual: Scripts de Tráfego eMBB UDP
+
+#### Descrição
+Estes scripts (`05_UDP_eMBB_trafego.sh` e `05_UDP_eMBB_trafego2.sh`) geram múltiplos fluxos de tráfego UDP simulando aplicações **eMBB** (enhanced Mobile Broadband). O tráfego é marcado com **DSCP AF11 (TOS 0x28)**, indicando prioridade média e tolerância moderada a perdas. Ideal para testes de QoS em redes.
+
+---
+
+#### Funcionamento
+1. **Parâmetros Configuráveis**:
+   - `DEST_IP`: IP do servidor de destino (ex: `10.0.1.2`)
+   - `BASE_PORT`: Porta inicial do fluxo (`5201` no primeiro script, `5206` no segundo)
+   - `PARALLEL`: Número de fluxos simultâneos (padrão: `5`)
+   - `DURATION`: Duração de cada fluxo em segundos (padrão: `60`)
+   - `BANDWIDTH`: Largura de banda **por fluxo** (ex: `10M` = 10 Mbps)
+   - `TOS`: Valor do campo *Type of Service* (fixo em `40` = DSCP AF11)
+   - `PACKET_SIZE`: Tamanho do pacote UDP (bytes)
+
+2. **Lógica de Execução**:
+   - Inicia `PARALLEL` fluxos UDP em paralelo usando `iperf3`.
+   - Cada fluxo usa uma porta única sequencial (ex: `5201`, `5202`, ...).
+   - O tráfego total agregado é `PARALLEL × BANDWIDTH` (ex: 5 fluxos × 10M = 50 Mbps).
+   - Aguarda automaticamente o término de todos os fluxos.
+
+---
+
+#### Como Usar
+1. **Pré-requisitos**:
+   - Servidor `iperf3` rodando no `DEST_IP` (ex: `iperf3 -s -p 5201`).
+   - Acesso root/sudo para execução (opcional, dependendo das portas).
+
+2. **Passos**:
+   - (Opcional) Ajuste os parâmetros no script conforme necessário.
+   - Torne o script executável:
+     ```bash
+     chmod +x 05_UDP_eMBB_trafego.sh
+     ```
+   - Execute:
+     ```bash
+     ./05_UDP_eMBB_trafego.sh  # Para o primeiro script
+     ./05_UDP_eMBB_trafego2.sh # Para o segundo script
+     ```
+
+3. **Saída Esperada**:
+   ```
+   [*] Iniciando 5 fluxos UDP eMBB
+       Destino: 10.0.1.2
+       Banda total: 50M
+       TOS: 0x28 (DSCP AF11)
+     [Fluxo 1] Porta 5201 | Banda 10M
+     [Fluxo 2] Porta 5202 | Banda 10M
+     ...
+   [*] Tráfego em execução. Aguardando término...
+   [+] Todos os fluxos concluídos
+   ```
+
+---
+
+#### Observações
+- **Diferenciação entre Scripts**:
+  - `05_UDP_eMBB_trafego.sh`: Usa portas `5201–5205`.
+  - `05_UDP_eMBB_trafego2.sh`: Usa portas `5206–5210`.
+- **Recomendação**:  
+  Use ambos simultaneamente para gerar tráfego agregado de até **100 Mbps** (10M/fluxo × 5 fluxos/script × 2 scripts).
+- **Notas Técnicas**:
+  - O DSCP AF11 (`TOS=40`) prioriza o tráfego acima de classes padrão, mas abaixo de voz/vídeo.
+  - Para depuração, remova `> /dev/null 2>&1` do script para ver saídas do `iperf3`.
